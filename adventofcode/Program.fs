@@ -5,6 +5,6 @@ open Adventofcode
 
 [<EntryPoint>]
 let main argv =
-    let r = Day4.day4 ()
+    let r = Day4.day4Part2 ()
     printfn "%A" r
     0 // return an integer exit code
