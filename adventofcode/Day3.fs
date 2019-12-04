@@ -52,12 +52,15 @@ module Day3 =
     let manhattanDistance (x, y) =
         abs x + abs y
 
-    let crosses (positions1 : System.Collections.Generic.List<int * int>) (positions2 : System.Collections.Generic.List<int * int>) =
+    let getCrosses (positions1 : System.Collections.Generic.List<int * int>) (positions2 : System.Collections.Generic.List<int * int>) =
         let s1 = Set.ofSeq positions1
         let s2 = Set.ofSeq positions2
         s1.Intersect s2
         |> List.ofSeq
         |> List.filter (fun p -> p <> (0, 0))
+
+    let minCrossByManhattan (positions1 : System.Collections.Generic.List<int * int>) (positions2 : System.Collections.Generic.List<int * int>) =
+        getCrosses positions1 positions2
         |> List.minBy manhattanDistance
         |> manhattanDistance
 
@@ -65,6 +68,24 @@ module Day3 =
         let (p1, p2) = getWirePaths InputFile
         let positions1 = followPath p1
         let positions2 = followPath p2
-        let c = crosses positions1 positions2
-        c
-        
+        let minCross = minCrossByManhattan positions1 positions2
+        minCross
+    
+    let getMinSteps (positions : System.Collections.Generic.List<int * int>) (target : int * int) =
+        positions.IndexOf target
+
+
+    let minCrossByCombinedSteps (positions1 : System.Collections.Generic.List<int * int>) (positions2 : System.Collections.Generic.List<int * int>) =
+        let crosses = getCrosses positions1 positions2
+        let dists1 = List.map (getMinSteps positions1) crosses
+        let dists2 = List.map (getMinSteps positions2) crosses
+        let sums = List.mapi2 (fun _ d1 d2 -> d1 + d2) dists1 dists2
+        sums.Min()
+
+    let day3Part2 () =
+        let (p1, p2) = getWirePaths InputFile
+        let positions1 = followPath p1
+        let positions2 = followPath p2
+        let crosses = getCrosses positions1 positions2
+        let minCross = minCrossByCombinedSteps positions1 positions2
+        minCross
