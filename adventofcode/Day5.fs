@@ -6,6 +6,7 @@ module Day5 =
     let InputFile = "Day5Input.txt"
 
     let InputValue = 1
+    let InputValuePart2 = 5
 
     type ParameterMode =
     | Position  // 0
@@ -16,6 +17,10 @@ module Day5 =
     | Multiply
     | Input
     | Output
+    | JumpIfTrue
+    | JumpIfFalse
+    | LessThan
+    | Equals
     | Halt
 
     let parseInstruction inst =
@@ -25,6 +30,10 @@ module Day5 =
                                      | 2 -> (Multiply, 3)
                                      | 3 -> (Input, 1)
                                      | 4 -> (Output, 1)
+                                     | 5 -> (JumpIfTrue, 2)
+                                     | 6 -> (JumpIfFalse, 2)
+                                     | 7 -> (LessThan, 3)
+                                     | 8 -> (Equals, 3)
                                      | 99 -> (Halt, 0)
                                      | _ -> System.ArgumentException("unknown opcodeCode") |> raise
         let mutable parameterModes = Array.empty
@@ -55,13 +64,25 @@ module Day5 =
 
     let doOpcode (opcode : Opcodes) (parameterModes : ParameterMode []) (parameters : int []) (program : int []) =
         match opcode with
-        | Input    -> program.[parameters.[0]] <- InputValue
+        | Input    -> program.[parameters.[0]] <- InputValuePart2
+                      None
         | Output   -> let p = getParameter parameterModes.[0] parameters.[0] program
                       printfn "Output = %d" p
+                      None
         | Plus | Multiply -> let p1 = getParameter parameterModes.[0] parameters.[0] program
                              let p2 = getParameter parameterModes.[1] parameters.[1] program
                              let op = if opcode = Plus then (+) else (*)
                              program.[parameters.[2]] <- op p1 p2
+                             None
+        | JumpIfTrue | JumpIfFalse -> let p1 = getParameter parameterModes.[0] parameters.[0] program
+                                      let p2 = getParameter parameterModes.[1] parameters.[1] program
+                                      let op = if opcode = JumpIfTrue then (<>) else (=)
+                                      if op p1 0 then Some p2 else None
+        | LessThan | Equals -> let p1 = getParameter parameterModes.[0] parameters.[0] program
+                               let p2 = getParameter parameterModes.[1] parameters.[1] program
+                               let op = if opcode = LessThan then (<) else (=)
+                               program.[parameters.[2]] <- if op p1 p2 then 1 else 0
+                               None
         | _        -> System.ArgumentException("doOpcode(): unsupported opcode") |> raise
 
     let runProgram (program : int []) =
@@ -73,8 +94,10 @@ module Day5 =
             then halt <- true
             else
                 let parameters = Array.skip(opcodePos + 1) program |> Array.take parameterModes.Length
-                doOpcode opcode parameterModes parameters program
-                opcodePos <- opcodePos + 1 + parameters.Length
+                let ipModified = doOpcode opcode parameterModes parameters program
+                match ipModified with
+                | Some p -> opcodePos <- p
+                | None   -> opcodePos <- opcodePos + 1 + parameters.Length
 
     let day5 () =
         let program = getProgram InputFile
