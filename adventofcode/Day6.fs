@@ -27,6 +27,14 @@ module Day6 =
             hop <- Array.tryFind (fun (x, y) -> y = fst hop.Value) orbits
         hops
 
+    let pathToCom (orbits : (string * string) []) name =
+        let mutable path = Array.empty
+        let mutable hop = Array.tryFind (fun (x, y) -> y = name) orbits
+        while Option.isSome hop do
+            path <- Array.append path [| fst hop.Value |]
+            hop <- Array.tryFind (fun (_, y) -> y = fst hop.Value) orbits
+        path
+
     let buildMap (orbits : (string * string) []) =
         let names1 = Array.map fst orbits
         let names2 = Array.map snd orbits
@@ -43,3 +51,17 @@ module Day6 =
         let orbits = getOrbits InputFile
         let orbitMap = buildMap orbits
         Array.sumBy (fun o -> o.IndirectOrbits + o.DirectOrbits) orbitMap
+
+    let day6Part2 () =
+        let orbits = getOrbits InputFile
+        let pathOfYou = pathToCom orbits "YOU"
+        let pathOfSan = pathToCom orbits "SAN"
+        let mutable crossPoint = None
+        let mutable i = 0
+        while Option.isNone crossPoint && i < pathOfYou.Length do
+            if Array.contains pathOfYou.[i] pathOfSan
+            then crossPoint <- Some pathOfYou.[i]
+            else i <- i + 1
+        let pathOfYouToCross = Array.takeWhile (fun p -> p <> crossPoint.Value) pathOfYou
+        let pathOfSanToCross = Array.takeWhile (fun p -> p <> crossPoint.Value) pathOfSan
+        pathOfYouToCross.Length + pathOfSanToCross.Length
