@@ -20,6 +20,11 @@ module Day7 =
     | Equals
     | Halt
 
+    type StopReasons =
+    | InputNeeded
+    | OutputReady of int
+    | Halted
+
     let parseInstruction inst =
         let opcodeCode = inst % 100
         let opcode, parameterCount = match opcodeCode with
@@ -102,6 +107,26 @@ module Day7 =
                 then inputValues <- if inputValues.Length >= 2 then inputValues.[1..] else Array.empty
         if output.IsSome then output.Value else System.ArgumentException("program didn't end with output") |> raise
 
+    let runProgramPart2 (program : int []) opcodePosition (inputs : int []) =
+        let mutable stopReason = None
+        let mutable opcodePos = opcodePosition
+        let mutable output = None
+        let mutable inputValues = Array.copy inputs
+        while stopReason.IsNone && opcodePos < (program.Length) do
+            let (opcode, parameterModes) = parseInstruction program.[opcodePos] 
+            match opcode with
+            | Halt -> stopReason <- Some Halted
+            | Input when (Array.isEmpty inputs) -> stopReason <- Some InputNeeded
+            | _ -> let parameters = Array.skip(opcodePos + 1) program |> Array.take parameterModes.Length
+                   let ipModified, outputMade = doOpcode opcode parameterModes parameters program inputValues
+                   output <- outputMade
+                   match ipModified with
+                   | Some p -> opcodePos <- p
+                   | None   -> opcodePos <- opcodePos + 1 + parameters.Length
+                   if opcode = Input then inputValues <- if inputValues.Length >= 2 then inputValues.[1..] else Array.empty
+                   else if opcode = Output then stopReason <- Some (OutputReady(output.Value))
+        stopReason.Value, opcodePos, inputValues
+
     let runPhaseCombination program (combination : int []) =
         let programA = Array.copy program
         let programB = Array.copy program
@@ -120,20 +145,96 @@ module Day7 =
         let outputE = runProgram programE inputE
         outputE
 
-    let getPossiblePhaseCombinations () =
+    let runPhaseCombinationPart2 program (combination : int []) =
+        let programA = Array.copy program
+        let programB = Array.copy program
+        let programC = Array.copy program
+        let programD = Array.copy program
+        let programE = Array.copy program
+        let mutable opcodePosA = 0
+        let mutable opcodePosB = 0
+        let mutable opcodePosC = 0
+        let mutable opcodePosD = 0
+        let mutable opcodePosE = 0
+        let mutable eHalted = false
+        let mutable inputA = [| combination.[0]; 0 |]
+        let mutable inputB = [| combination.[1]; |]
+        let mutable inputC = [| combination.[2]; |]
+        let mutable inputD = [| combination.[3]; |]
+        let mutable inputE = [| combination.[4]; |]
+        let mutable lastOutput = None
+        
+        while not eHalted do
+            let (a1, a2, a3) = runProgramPart2 programA opcodePosA inputA
+            opcodePosA <- a2
+            inputA <- a3
+            match (a1) with
+            | Halted -> printfn "a halted"
+            | InputNeeded -> printfn "a needs input"
+            | OutputReady o -> printfn "a has output ready"
+                               inputB <- Array.append inputB [|o|]
+            
+            let (b1, b2, b3) = runProgramPart2 programB opcodePosB inputB
+            opcodePosB <- b2
+            inputB <- b3
+            match b1 with
+            | Halted -> printfn "b halted"
+            | InputNeeded -> printfn "b needs input"
+            | OutputReady o -> printfn "b has output ready"
+                               inputC <- Array.append inputC [|o|]
+
+            let (c1, c2, c3) = runProgramPart2 programC opcodePosC inputC
+            opcodePosC <- c2
+            inputC <- c3
+            match c1 with
+            | Halted -> printfn "c halted"
+            | InputNeeded -> printfn "c needs input"
+            | OutputReady o -> printfn "c has output ready"
+                               inputD <- Array.append inputD [|o|]
+
+            let (d1, d2, d3) = runProgramPart2 programD opcodePosD inputD
+            opcodePosD <- d2
+            inputD <- d3
+            match d1 with
+            | Halted        -> printfn "d halted"
+            | InputNeeded   -> printfn "d needs input"
+            | OutputReady o -> printfn "d has output ready"
+                               inputE <- Array.append inputE [|o|]
+
+            let (e1, e2, e3) = runProgramPart2 programE opcodePosE inputE
+            opcodePosE <- e2
+            inputE <- e3
+            match e1 with
+            | Halted        -> printfn "e halted at output %d" lastOutput.Value
+                               eHalted <- true
+            | InputNeeded   -> printfn "e needs input"
+            | OutputReady o -> printfn "e has output ready"
+                               inputA <- Array.append inputA [|o|]
+                               lastOutput <- Some o
+        lastOutput.Value
+        
+
+    let getPossiblePhaseCombinations range =
         let mutable combinations = System.Collections.Generic.List<int []>()
-        for a in 0 .. 4 do
-            for b in (Seq.filter (fun x -> x <> a) [0 .. 4]) do
-                for c in (Seq.filter (fun x -> x <> a && x <> b) [0 .. 4]) do
-                    for d in (Seq.filter (fun x -> x <> a && x <> b && x <> c) [0 .. 4]) do
-                        for e in (Seq.filter (fun x -> x <> a && x <> b && x <> c && x <> d ) [0 .. 4]) do
+        for a in range do
+            for b in (Seq.filter (fun x -> x <> a) range) do
+                for c in (Seq.filter (fun x -> x <> a && x <> b) range) do
+                    for d in (Seq.filter (fun x -> x <> a && x <> b && x <> c) range) do
+                        for e in (Seq.filter (fun x -> x <> a && x <> b && x <> c && x <> d ) range) do
                             combinations.Add [|a; b; c; d; e|]
         combinations.ToArray()
 
 
     let day7 () =
         let program = getProgram InputFile
-        let combinations = getPossiblePhaseCombinations()
+        let combinations = getPossiblePhaseCombinations [0 .. 4]
         let maxSignal = Array.map (runPhaseCombination program) combinations
                         |> Array.max
         maxSignal
+
+    let day7Part2 () =
+        let program = getProgram InputFile
+        let combinations = getPossiblePhaseCombinations [5 .. 9]
+        let maxSignal = Array.map (runPhaseCombinationPart2 program) combinations
+                        |> Array.max
+        maxSignal   // 14 wrong
