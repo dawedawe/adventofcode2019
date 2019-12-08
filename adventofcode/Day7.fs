@@ -107,16 +107,15 @@ module Day7 =
                 then inputValues <- if inputValues.Length >= 2 then inputValues.[1..] else Array.empty
         if output.IsSome then output.Value else System.ArgumentException("program didn't end with output") |> raise
 
-    let runProgramPart2 (program : int []) opcodePosition (inputs : int []) =
+    let runProgramPart2 (program : int []) opcodePosition (inputValues : byref<int []>) =
         let mutable stopReason = None
         let mutable opcodePos = opcodePosition
         let mutable output = None
-        let mutable inputValues = Array.copy inputs
         while stopReason.IsNone && opcodePos < (program.Length) do
             let (opcode, parameterModes) = parseInstruction program.[opcodePos] 
             match opcode with
             | Halt -> stopReason <- Some Halted
-            | Input when (Array.isEmpty inputs) -> stopReason <- Some InputNeeded
+            | Input when (Array.isEmpty inputValues) -> stopReason <- Some InputNeeded
             | _ -> let parameters = Array.skip(opcodePos + 1) program |> Array.take parameterModes.Length
                    let ipModified, outputMade = doOpcode opcode parameterModes parameters program inputValues
                    output <- outputMade
@@ -125,7 +124,7 @@ module Day7 =
                    | None   -> opcodePos <- opcodePos + 1 + parameters.Length
                    if opcode = Input then inputValues <- if inputValues.Length >= 2 then inputValues.[1..] else Array.empty
                    else if opcode = Output then stopReason <- Some (OutputReady(output.Value))
-        stopReason.Value, opcodePos, inputValues
+        stopReason.Value, opcodePos
 
     let runPhaseCombination program (combination : int []) =
         let programA = Array.copy program
@@ -165,45 +164,40 @@ module Day7 =
         let mutable lastOutput = None
         
         while not eHalted do
-            let (a1, a2, a3) = runProgramPart2 programA opcodePosA inputA
+            let (a1, a2) = runProgramPart2 programA opcodePosA &inputA
             opcodePosA <- a2
-            inputA <- a3
             match (a1) with
             | Halted -> printfn "a halted"
             | InputNeeded -> printfn "a needs input"
             | OutputReady o -> printfn "a has output ready"
                                inputB <- Array.append inputB [|o|]
             
-            let (b1, b2, b3) = runProgramPart2 programB opcodePosB inputB
+            let (b1, b2) = runProgramPart2 programB opcodePosB &inputB
             opcodePosB <- b2
-            inputB <- b3
             match b1 with
             | Halted -> printfn "b halted"
             | InputNeeded -> printfn "b needs input"
             | OutputReady o -> printfn "b has output ready"
                                inputC <- Array.append inputC [|o|]
 
-            let (c1, c2, c3) = runProgramPart2 programC opcodePosC inputC
+            let (c1, c2) = runProgramPart2 programC opcodePosC &inputC
             opcodePosC <- c2
-            inputC <- c3
             match c1 with
             | Halted -> printfn "c halted"
             | InputNeeded -> printfn "c needs input"
             | OutputReady o -> printfn "c has output ready"
                                inputD <- Array.append inputD [|o|]
 
-            let (d1, d2, d3) = runProgramPart2 programD opcodePosD inputD
+            let (d1, d2) = runProgramPart2 programD opcodePosD &inputD
             opcodePosD <- d2
-            inputD <- d3
             match d1 with
             | Halted        -> printfn "d halted"
             | InputNeeded   -> printfn "d needs input"
             | OutputReady o -> printfn "d has output ready"
                                inputE <- Array.append inputE [|o|]
 
-            let (e1, e2, e3) = runProgramPart2 programE opcodePosE inputE
+            let (e1, e2) = runProgramPart2 programE opcodePosE &inputE
             opcodePosE <- e2
-            inputE <- e3
             match e1 with
             | Halted        -> printfn "e halted at output %d" lastOutput.Value
                                eHalted <- true
@@ -237,4 +231,4 @@ module Day7 =
         let combinations = getPossiblePhaseCombinations [5 .. 9]
         let maxSignal = Array.map (runPhaseCombinationPart2 program) combinations
                         |> Array.max
-        maxSignal   // 14 wrong
+        maxSignal
