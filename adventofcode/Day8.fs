@@ -34,3 +34,30 @@ module Day8 =
         let ones = digitsInLayer 1 layer
         let twos = digitsInLayer 2 layer
         ones * twos
+
+    let displayLayer (layer : int []) w h =
+        for i in 0 .. (h - 1) do
+            let rowStart = i * w
+            let rowEnd = rowStart + (w - 1)
+            let row = layer.[rowStart .. rowEnd]
+            let symbols = Array.map (fun x -> if x = 0 then 'X' else ' ' ) row
+                          |> Array.fold (fun s c -> s + string(c)) ""
+            printfn "%A" symbols
+
+    let getPixelColor (layers : int [] []) pos =
+        let mutable color = 2
+        let mutable i = 0
+        while color = 2 && i < layers.Length do
+            let pixel = layers.[i].[pos]
+            match pixel with
+            | 0 -> color <- 0
+            | 1 -> color <- 1
+            | _ -> ()
+            i <- i + 1
+        color
+
+
+    let day8Part2 () =
+        let layers = getLayers InputFile Wide Tall
+        let colors = Array.map (getPixelColor layers) [| 0 .. (Tall * Wide - 1) |]
+        displayLayer colors Wide Tall
