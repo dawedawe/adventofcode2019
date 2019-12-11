@@ -143,3 +143,10 @@ module Day9 =
         let program = getProgram InputFile
         let o = runProgram program
         o
+
+        
+    let day9Part2 () =
+        let program = getProgram InputFile
+        let programPart2 = { program with Inputs = [| 2L |] }
+        let o = runProgram programPart2
+        o
