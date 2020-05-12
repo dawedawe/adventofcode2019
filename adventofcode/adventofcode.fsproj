@@ -1,10 +1,10 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>netcoreapp3.0</TargetFramework>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="Day10.fs" />
+    <Compile Include="Day11.fs" />
     <Compile Include="Program.fs" />
     <Content Include="*Input.txt">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
