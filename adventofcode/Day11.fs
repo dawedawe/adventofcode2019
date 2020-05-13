@@ -224,12 +224,37 @@ module Day11 =
                                                         program.Inputs <- [| input; |]
                     | _ -> System.ArgumentException("unsupported outputCounter value") |> raise
                     outputCounter <- outputCounter + 1
-        paintState.Panels
-        |> Map.filter (fun _ v -> v.TimesPainted >= 1)
-        |> Map.count
+        paintState
 
     let day11 () =
         let program = getProgram InputFile
         let program' = { program with Inputs = [| 0L; |] }
-        let o = runProgram program'
-        o
+        let paintState = runProgram program'
+        paintState.Panels
+        |> Map.filter (fun _ v -> v.TimesPainted >= 1)
+        |> Map.count
+
+    let colorToChar = function
+        | Color.White -> "#"
+        | Color.Black -> " "
+        | _           -> System.ArgumentException("unsupported color") |> raise
+
+    let day11Part2 () =
+        let program = getProgram InputFile
+        let program' = { program with Inputs = [| 1L; |] }
+        let paintState = runProgram program'
+        let panels = paintState.Panels |> Map.toList
+        let firstLineNumber = panels |> List.maxBy (fun (p, _) -> p.Ypos) |> fun (p, _) -> p.Ypos
+        let lastLineNumber = panels |> List.minBy (fun (p, _) -> p.Ypos) |> fun (p, _) -> p.Ypos
+        let firstColumnNumber = panels |> List.minBy (fun (p, _) -> p.Xpos) |> fun (p, _) -> p.Xpos
+        let lastColumnNumber = panels |> List.maxBy (fun (p, _) -> p.Xpos) |> fun (p, _) -> p.Xpos
+        for lineNumber in [firstLineNumber .. -1 .. lastLineNumber] do
+            let linePanels = panels |> List.filter (fun (p, _) -> p.Ypos = lineNumber)
+                                    |> List.sortBy (fun (p, _) -> p.Xpos)
+            let mutable lineString = ""
+            for column in [firstColumnNumber .. lastColumnNumber] do
+                let panelInColumn = linePanels |> List.tryFind (fun (p, _) -> p.Xpos = column)
+                if Option.isSome panelInColumn
+                then lineString <- lineString + (colorToChar (snd panelInColumn.Value).Color)
+                else lineString <- lineString + " "
+            printfn "%s" lineString
