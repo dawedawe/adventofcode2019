@@ -5,8 +5,6 @@ module Day12 =
     [<Literal>]
     let InputFile = "Day12Input.txt"
 
-    open System.Text.RegularExpressions
-
     type Moon = {
             Xpos : int
             Ypos : int
