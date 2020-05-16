@@ -62,7 +62,7 @@ module Day13 =
         let input = System.IO.File.ReadAllLines path
         let memory = input.[0].Split [|','|]
                       |> Array.map System.Int64.Parse
-        { Memory = memory; RelativeBase = 0; Inputs = [| 1L |] }
+        { Memory = memory; RelativeBase = 0; Inputs = [| |] }
     
     let resizeIfNeeded (program : Program) memoryPosition =
         if memoryPosition >= program.Memory.Length
@@ -95,7 +95,7 @@ module Day13 =
                                       program.Inputs <- program.Inputs.[1..]
                                       (None, None)
         | Output                   -> let p = getParameter parameterModes.[0] parameters.[0] program
-                                      printfn "Output = %d" p
+                                    //   printfn "Output = %d" p
                                       (None, Some p)
         | Plus | Multiply          -> let p1 = getParameter parameterModes.[0] parameters.[0] program
                                       let p2 = getParameter parameterModes.[1] parameters.[1] program
@@ -120,11 +120,69 @@ module Day13 =
                                       (None, None)
         | _                        -> System.ArgumentException("doOpcode(): unsupported opcode") |> raise
 
+    type OutputTriple = {
+        X : Option<int>
+        Y : Option<int>
+        Id : Option<int>
+    }
+
+    let tileIdToString = function
+        | 0 -> " "  // empty
+        | 1 -> "|"  // wall
+        | 2 -> "#"  // block
+        | 3 -> "_"  // paddle
+        | 4 -> "O"  // ball
+        | _ -> System.ArgumentException("unsupported tile id") |> raise
+
+    let printGrid (grid : Map<int * int, int>) =
+        let panels = Map.toList grid
+        let firstLineNumber = panels |> List.minBy (fun (p, _) -> snd p) |> fun (p, _) -> snd p
+        let lastLineNumber = panels |> List.maxBy (fun (p, _) -> snd p) |> fun (p, _) -> snd p
+        let firstColumnNumber = panels |> List.minBy (fun (p, _) -> fst p) |> fun (p, _) -> fst p
+        let lastColumnNumber = panels |> List.maxBy (fun (p, _) -> fst p) |> fun (p, _) -> fst p
+        for lineNumber in [firstLineNumber .. lastLineNumber] do
+            let linePanels = panels |> List.filter (fun (p, _) -> snd p = lineNumber)
+                                    |> List.sortBy (fun (p, _) -> fst p)
+            let mutable lineString = ""
+            for column in [firstColumnNumber .. lastColumnNumber] do
+                let panelInColumn = linePanels |> List.tryFind (fun (p, _) -> fst p = column)
+                if Option.isSome panelInColumn
+                then lineString <- lineString + ((snd panelInColumn.Value) |> tileIdToString)
+                else lineString <- lineString + " "
+            printfn "%s" lineString
+
+    let findBall (grid : Map<int * int, int>) =
+        Map.tryPick (fun k v -> if v = 4 then Some k else None)  grid |> Option.get
+
+    let findJoystick (grid : Map<int * int, int>) =
+        Map.tryPick (fun k v -> if v = 3 then Some k else None)  grid |> Option.get
+
+    let moveJoystick (grid : Map<int * int, int>) =
+        let ballXPos = findBall grid |> fst
+        let joystickXPos = findJoystick grid |> fst
+        if ballXPos < joystickXPos
+        then -1
+        else if ballXPos = joystickXPos
+        then 0
+        else 1
+
+    let processOutput (grid : Map<int * int, int>) outputTriple =
+        if (outputTriple.X.Value = -1)
+        then
+            printfn "Score: %d" outputTriple.Id.Value
+            grid
+        else
+            let grid' = Map.add (outputTriple.X.Value, outputTriple.Y.Value) outputTriple.Id.Value grid
+            grid'
+
     let runProgram (program : Program) =
         let mutable halt = false
         let mutable opcodePos = 0
         let mutable output = None
         let mutable outputs = List.empty
+        let mutable outputCounter = 0
+        let mutable outputTriple = { X = None; Y = None; Id = None }
+        let mutable grid = Map.empty<int * int, int>
         while not halt do
             let (opcode, parameterModes) = parseInstruction (int program.Memory.[opcodePos])
             if opcode = Halt
@@ -132,6 +190,12 @@ module Day13 =
             else
                 let parameters = Array.skip(opcodePos + 1) program.Memory |> Array.take parameterModes.Length
                 System.Diagnostics.Debug.Assert(parameters.Length = parameterModes.Length)
+                
+                if opcode = Opcodes.Input
+                then let move = moveJoystick grid
+                     program.Inputs <- Array.append program.Inputs [| int64 move |]
+                     printGrid grid
+
                 let ipModified, outputMade = doOpcode opcode parameterModes parameters program
                 output <- outputMade
                 match ipModified with
@@ -140,18 +204,27 @@ module Day13 =
                 resizeIfNeeded program opcodePos
 
                 if Option.isSome output
-                then outputs <- outputs @ [ output.Value ]
-                    
-        outputs
+                then
+                    outputs <- outputs @ [ output.Value ]
+                    match (outputCounter % 3) with
+                    | 0 -> outputTriple <- { outputTriple with X = Some (int output.Value) }
+                    | 1 -> outputTriple <- { outputTriple with Y = Some (int output.Value) }
+                    | 2 -> outputTriple <- { outputTriple with Id = Some (int output.Value) }
+                           grid <- processOutput grid outputTriple
+                           outputTriple <- { X = None; Y = None; Id = None }
+                    | _ -> System.Exception("bad state") |> raise
+                    outputCounter <- outputCounter + 1
+        grid
 
     let day13 () =
         let program = getProgram InputFile
-        let outputs = runProgram { program with Inputs = [||] }
-        let mutable grid = Map.empty<int * int, int>
-        for i in [0 .. 3 .. outputs.Length - 1] do
-            let x = int outputs.[i]
-            let y = int outputs.[i + 1]
-            let p = int outputs.[i + 2]
-            grid <- Map.add (x, y) p grid
+        let grid = runProgram { program with Inputs = [||] }
         let count = Map.toList grid |> List.sumBy (fun (_, v) -> if v = 2 then 1 else 0)
+        printGrid grid
         count
+    
+    let day13Part2 () =
+        let program = getProgram InputFile
+        program.Memory.[0] <- 2L
+        runProgram program |> ignore
+        ()
