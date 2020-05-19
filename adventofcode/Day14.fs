@@ -78,10 +78,9 @@ module Day14 =
                 leftOvers' <- y
             (needsSoFar', leftOvers')
 
-    let day14 () =
-        let reactions = getReactions InputFile
-                        |> Array.map (fun r -> r.Output.Name, r) |> Map.ofArray
-        let needs, leftOvers = traverse reactions "FUEL" 1L Map.empty Map.empty
+    
+
+    let calcOreConsumption needs reactions =
         let oreProducts = reactions |> Map.filter (fun k v -> v.Inputs.[0].Name = "ORE")
         let oreNeeds = needs |> Map.filter (fun k t -> oreProducts.ContainsKey k)
         let mutable oreConsumptionSum = 0L
@@ -90,3 +89,36 @@ module Day14 =
             let oreConsumption = runs * (int64 reactions.[oreNeed.Key].Inputs.[0].Amount)
             oreConsumptionSum <- oreConsumptionSum + oreConsumption
         oreConsumptionSum
+
+    let day14 () =
+        let reactions = getReactions InputFile
+                        |> Array.map (fun r -> r.Output.Name, r) |> Map.ofArray
+        let needs, leftOvers = traverse reactions "FUEL" 1L Map.empty Map.empty
+        let oreConsumption = calcOreConsumption needs reactions
+        oreConsumption
+        
+
+    let day14Part2 () =
+        let reactions = getReactions InputFile
+                        |> Array.map (fun r -> r.Output.Name, r) |> Map.ofArray
+        let mutable oreCargo = 1000000000000L
+        let mutable fuelProduced = 0L
+        let mutable leftOvers = Map.empty
+        let mutable fuelToProduce = 10000L
+        while oreCargo > 0L do
+            let needs, leftOvers' = traverse reactions "FUEL" fuelToProduce Map.empty leftOvers
+            leftOvers <- leftOvers'
+            let oreConsumption = calcOreConsumption needs reactions
+            printfn "oreConsumption %d oreCargo %d" oreConsumption oreCargo
+            if (oreCargo >= oreConsumption)
+            then
+                oreCargo <- oreCargo - oreConsumption
+                fuelProduced <- fuelProduced + fuelToProduce
+            else if fuelToProduce > 1L
+            then
+                printfn "Slowing down"
+                fuelToProduce <- 1L
+            else if fuelToProduce = 1L
+            then
+                oreCargo <- -1L
+        fuelProduced
