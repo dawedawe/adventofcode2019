@@ -195,7 +195,7 @@ module Day15 =
         Path : Direction []
     }
 
-    let getAdjacentPositions (pos : Position) =
+    let getAdjacentPositionsAndDirections (pos : Position) =
         let northPos = { pos with Y = pos.Y + 1 }
         let southPos = { pos with Y = pos.Y - 1 }
         let westPos  = { pos with X = pos.X - 1 }
@@ -238,7 +238,7 @@ module Day15 =
                 
             queue.Dequeue() |> ignore
 
-            let adjacentPositions = getAdjacentPositions currentLocation.Pos
+            let adjacentPositions = getAdjacentPositionsAndDirections currentLocation.Pos
             for adjacentPos in adjacentPositions do
                 if not (grid.ContainsKey (fst adjacentPos))
                 then
@@ -259,6 +259,52 @@ module Day15 =
         let program = getProgram InputFile
         let d = bfs program
         d
-        // let state = runProgram { program with Inputs = [| int64 Direction.North |]  }
-        // printGrid state.Grid
-        // state.OxygenPos.Value
+
+    let bfsForWholeGrid (program : Program) =
+        let initPos = { X = 0; Y = 0; }
+        let initLocation = { Pos = initPos; Distance = 0; Path = Array.empty }
+        let mutable grid = Map.empty.Add (initPos, '.')
+        let queue = System.Collections.Generic.Queue<Location>()
+        queue.Enqueue initLocation
+        
+        while (queue.Count <> 0) do
+            let currentLocation = queue.Peek()
+            queue.Dequeue() |> ignore
+
+            let adjacentPositionsAndDirections = getAdjacentPositionsAndDirections currentLocation.Pos
+            for (adjacentPos, adjacentDir) in adjacentPositionsAndDirections do
+                if not (grid.ContainsKey adjacentPos)
+                then
+                    let pathToAdjacent = Array.append currentLocation.Path [| adjacentDir |]
+                    let adjacentLocation = { Pos = adjacentPos; Distance = currentLocation.Distance + 1; Path = pathToAdjacent }
+                    let inputsToAdjacentLocation = adjacentLocation.Path |> Array.map int64
+                    let program' = { (copyProgram program) with Inputs = inputsToAdjacentLocation }
+                    let output = runProgram program' |> int |> enum<StatusCode>
+                    grid <- updateGrid grid adjacentLocation.Pos output
+                    if (output <> StatusCode.HitWall)
+                    then queue.Enqueue adjacentLocation
+
+        grid
+
+    let rec fillGridWithOxygen (grid : Map<Position, char>) (minutesSoFar : int) =
+        let isGridFilled = grid |> Map.filter (fun _ v -> v = '.') |> Map.count = 0
+        if isGridFilled
+        then
+            minutesSoFar
+        else
+            let mutable grid' = grid
+            let oxygenLocations = grid' |> Map.filter (fun _ v -> v = 'O') |> Map.toList |> List.map fst
+            for oxygenLocation in oxygenLocations do
+                let adjacentPositions = getAdjacentPositionsAndDirections oxygenLocation
+                                        |> List.map fst
+                                        |> List.filter (fun p -> grid.[p] = '.')
+                for adjacentPosition in adjacentPositions do
+                    grid' <- grid'.Add (adjacentPosition, 'O')
+            let minutesSoFar' = minutesSoFar + 1
+            fillGridWithOxygen grid' minutesSoFar'
+
+    let day15Part2 () =
+        let grid = getProgram InputFile
+                   |> bfsForWholeGrid
+        let minutesNeeded = fillGridWithOxygen grid 0
+        minutesNeeded
