@@ -95,7 +95,7 @@ module Day17 =
                                       program.Inputs <- program.Inputs.[1..]
                                       (None, None)
         | Output                   -> let p = getParameter parameterModes.[0] parameters.[0] program
-                                      // printfn "Output = %d" p
+                                    // printfn "Output = %d" p
                                       (None, Some p)
         | Plus | Multiply          -> let p1 = getParameter parameterModes.[0] parameters.[0] program
                                       let p2 = getParameter parameterModes.[1] parameters.[1] program
@@ -134,8 +134,8 @@ module Day17 =
                 let parameters = Array.skip(opcodePos + 1) program.Memory |> Array.take parameterModes.Length
                 System.Diagnostics.Debug.Assert(parameters.Length = parameterModes.Length)
                 
-                if opcode = Opcodes.Input
-                then printfn "input needed"
+                // if opcode = Opcodes.Input
+                // then printfn "input needed"
                 
                 let ipModified, outputMade = doOpcode opcode parameterModes parameters program
                 output <- outputMade
@@ -209,3 +209,28 @@ module Day17 =
             grid <- grid.Add (i, 'O')
         printGrid grid
         sum
+
+    let mainRoutine = [| 'A'; ','; 'B'; ','; 'A'; ','; 'C'; ','; 'B'; ','; 'C'; ','; 'B'; ','; 'C'; ','; 'A'; ','; 'B'; |]
+
+    let functionA = [| 'L'; ','; '6'; ','; 'L'; ','; '4'; ','; 'R'; ','; '8'; |]
+
+    let functionB = [| 'R'; ','; '8'; ','; 'L'; ','; '6'; ','; 'L'; ','; '4'; ','; 'L'; ','; '1'; '0' ; ','; 'R'; ','; '8'; |]
+
+    let functionC = [| 'L'; ','; '4'; ','; 'R'; ','; '4'; ','; 'L'; ','; '4'; ','; 'R'; ','; '8'; |]
+
+    let toAsciiInput (chars : char []) =
+        let inputs = Array.map int64 chars
+        Array.append inputs [| 10L |]
+
+    let day17Part2 () =
+        let program = getProgram InputFile
+        program.Memory.[0] <- 2L
+        let inputs = Array.concat [| (mainRoutine |> toAsciiInput);
+                                     (functionA |> toAsciiInput);
+                                     (functionB |> toAsciiInput);
+                                     (functionC |> toAsciiInput);
+                                     ([| 'n' |] |> toAsciiInput); |]
+        program.Inputs <- inputs
+        let dust = runProgram program
+                   |> List.last
+        dust
