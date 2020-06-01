@@ -149,11 +149,68 @@ module Day19 =
         
         output.Value
 
-    let positionInputs =
-        [0L .. 49L]
-        |> Seq.collect (fun x -> [0L .. 49L] |> Seq.map (fun y -> [| x; y; |]))
-
     let day19 () =
         let program = getProgram InputFile
+        let positionInputs = [0L .. 49L] 
+                             |> Seq.collect (fun x -> [0L .. 49L] |> Seq.map (fun y -> [| x; y; |]))
         positionInputs
         |> Seq.sumBy (fun inputs -> runProgram { program with Inputs = inputs })
+
+    let copyProgram (program : Program) =
+        let inputs = Array.copy program.Inputs
+        let memory = Array.copy program.Memory
+        let relativeBase = program.RelativeBase
+        let copy = { Inputs = inputs; Memory = memory; RelativeBase = relativeBase }
+        copy
+
+    let testIfSquareStart program (upperLeftX, upperLeftY) n =
+        let rightX = upperLeftX + n - 1L
+        let lowerY = upperLeftY + n - 1L
+        let upperLeft = [| upperLeftX; upperLeftY; |]
+        let upperRight = [| rightX; upperLeftY |]
+        let lowerLeft = [| upperLeftX; lowerY; |]
+        let lowerRight = [| rightX; lowerY; |]
+        let isSquareStart = runProgram { (copyProgram program) with Inputs = upperLeft } = 1L
+                            && runProgram { (copyProgram program) with Inputs = upperRight } = 1L
+                            && runProgram { (copyProgram program) with Inputs = lowerLeft } = 1L
+                            && runProgram { (copyProgram program) with Inputs = lowerRight } = 1L
+        if isSquareStart then Some (upperLeftX, upperLeftY) else None
+
+    let testYForPossibleSquareStart program y n =
+        let mutable beamStartX = None
+        let mutable xToTest = 0L
+        while Option.isNone beamStartX do
+            let coordinates = [| xToTest; y; |]
+            let o = runProgram { (copyProgram program) with Inputs = coordinates }
+            if o = 1L then beamStartX <- Some xToTest
+            xToTest <- xToTest + 1L
+
+        xToTest <- beamStartX.Value + n - 1L
+        let coordinates = [| xToTest; y; |]
+        let hasMinLength =  runProgram { (copyProgram program) with Inputs = coordinates } = 1L
+
+        if hasMinLength
+        then
+            let mutable beamEndX = None
+            while Option.isNone beamEndX do
+                let coordinates = [| xToTest; y; |]
+                let o = runProgram { (copyProgram program) with Inputs = coordinates }
+                if o = 0L
+                then beamEndX <- Some (xToTest - 1L)
+                else xToTest <- xToTest + 1L
+        
+            let upperLeftFromEnd = beamEndX.Value - n + 1L
+            testIfSquareStart program (upperLeftFromEnd, y) n
+        else
+            None
+
+    let day19Part2 () =
+        let program = getProgram InputFile
+        let mutable squareStart = None
+        let mutable y = 100L
+        while squareStart = None do
+            printfn "testing y = %d" y
+            squareStart <- testYForPossibleSquareStart program y 100L
+            y <- y + 1L
+        let (x, y) = squareStart.Value
+        x * 10000L + y
