@@ -4,7 +4,7 @@
     <TargetFramework>netcoreapp3.1</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="Day20.fs" />
+    <Compile Include="Day21.fs" />
     <Compile Include="Program.fs" />
     <Content Include="*Input.txt">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
