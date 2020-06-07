@@ -153,7 +153,7 @@ module Day21 =
         let inputs = Array.map int64 chars
         Array.append inputs [| 10L |]
 
-    let generate3HoleInputs () =
+    let generate3HoleInputsPart1 () =
         [|
             "NOT A J".ToCharArray() |> toAsciiInput;
             "NOT B T".ToCharArray() |> toAsciiInput;
@@ -163,7 +163,7 @@ module Day21 =
             "AND D J".ToCharArray() |> toAsciiInput;
         |] |> Array.concat
 
-    let generateRepeating1HoleInputs () =
+    let generateRepeating1HoleInputsPart1 () =
         [|
             "NOT B J".ToCharArray() |> toAsciiInput;
             "NOT C T".ToCharArray() |> toAsciiInput;
@@ -172,12 +172,43 @@ module Day21 =
             "AND T J".ToCharArray() |> toAsciiInput;
             "NOT A T".ToCharArray() |> toAsciiInput;
             "OR T J".ToCharArray() |> toAsciiInput;
-            "WALK".ToCharArray() |> toAsciiInput;
         |] |> Array.concat
 
     let day21 () =
         let program = getProgram InputFile
-        let inputs = [| generate3HoleInputs(); generateRepeating1HoleInputs(); |] |> Array.concat
+        let walkInput = "WALK".ToCharArray() |> toAsciiInput;
+        let inputs = [| generate3HoleInputsPart1(); generateRepeating1HoleInputsPart1(); walkInput |] |> Array.concat
+        let program' = { program with Inputs = inputs }
+        let outputs = runProgram program'
+        outputs
+
+    let generate3WideHoleInputsPart2 () =
+        [|
+            "NOT A J".ToCharArray() |> toAsciiInput;
+            "NOT B T".ToCharArray() |> toAsciiInput;
+            "AND T J".ToCharArray() |> toAsciiInput;
+            "NOT C T".ToCharArray() |> toAsciiInput;
+            "AND T J".ToCharArray() |> toAsciiInput;
+        |] |> Array.concat
+
+    let generate1WideHoleInputsPart2() =
+        [|
+            "NOT C T".ToCharArray() |> toAsciiInput;
+            "AND D T".ToCharArray() |> toAsciiInput;
+            "AND H T".ToCharArray() |> toAsciiInput;
+            "OR T J".ToCharArray() |> toAsciiInput;
+            "NOT B T".ToCharArray() |> toAsciiInput;
+            "AND D T".ToCharArray() |> toAsciiInput;
+            "OR T J".ToCharArray() |> toAsciiInput;
+            "NOT A T".ToCharArray() |> toAsciiInput;
+            "AND D T".ToCharArray() |> toAsciiInput;
+            "OR T J".ToCharArray() |> toAsciiInput;
+        |] |> Array.concat
+
+    let day21Part2 () =
+        let program = getProgram InputFile
+        let runInput = "RUN".ToCharArray() |> toAsciiInput;
+        let inputs = [| generate3WideHoleInputsPart2(); generate1WideHoleInputsPart2(); runInput |] |> Array.concat
         let program' = { program with Inputs = inputs }
         let outputs = runProgram program'
         outputs
