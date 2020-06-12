@@ -131,7 +131,18 @@ module Day23 =
         Program: Program
         InputQueue: Queue<Packet>
         OutputQueue: Queue<Packet>
+        Idle: bool
     }
+
+    // let distribute (nicStates: NicState []) nicState =
+    //     let mutable r = None
+    //     while nicState.OutputQueue.Count > 0 do
+    //         let packet = nicState.OutputQueue.Dequeue()
+    //         let target = int packet.Target
+    //         if target = 255
+    //         then r <- Some packet.Y
+    //         else nicStates.[target].InputQueue.Enqueue(packet)
+    //     r
 
     let distribute (nicStates: NicState []) nicState =
         let mutable r = None
@@ -139,7 +150,7 @@ module Day23 =
             let packet = nicState.OutputQueue.Dequeue()
             let target = int packet.Target
             if target = 255
-            then r <- Some packet.Y
+            then r <- Some packet
             else nicStates.[target].InputQueue.Enqueue(packet)
         r
 
@@ -155,7 +166,7 @@ module Day23 =
         let mutable outputs = List.empty
         let mutable awaitingInputCount = 0
 
-        while not halt && awaitingInputCount < 1 do
+        while not halt && awaitingInputCount < 10 do
             let (opcode, parameterModes) = parseInstruction (int nicState.Program.Memory.[nicState.Program.OpcodePos])
             if opcode = Halt
             then halt <- true
@@ -165,10 +176,11 @@ module Day23 =
                 
                 if opcode = Opcodes.Input
                 then
-                    awaitingInputCount <- awaitingInputCount + 1
                     printfn "input needed by nic %d %A" nicState.Address nicState.Program.Inputs
                     if nicState.Program.Inputs.Length = 0
-                    then nicState.Program.Inputs <- [| -1L |]
+                    then
+                        nicState.Program.Inputs <- [| -1L |]
+                        awaitingInputCount <- awaitingInputCount + 1
                 
                 let ipModified, outputMade = doOpcode opcode parameterModes parameters nicState.Program
                 output <- outputMade
@@ -187,7 +199,8 @@ module Day23 =
                         nicState.OutputQueue.Enqueue(outPacket)
                         outputs <- List.empty
         
-        nicState
+        let idle = awaitingInputCount > 9
+        { nicState with Idle = idle }
 
     let copyProgram (program : Program) =
         let inputs = Array.copy program.Inputs
@@ -203,7 +216,8 @@ module Day23 =
             Address = i
             Program = { (copyProgram program) with Inputs = [| i; |] }
             InputQueue = Queue<Packet>()
-            OutputQueue = Queue<Packet>() })
+            OutputQueue = Queue<Packet>()
+            Idle = false })
 
     let day23 () =
         let program = getProgram InputFile
@@ -217,4 +231,31 @@ module Day23 =
             if Option.isNone first255Y
             then first255Y <- r
             i <- (i + 1) % 50
-        first255Y.Value
+        first255Y.Value.Y
+
+    let isNetworkIdle nicStates =
+        nicStates
+        |> Array.forall (fun n -> n.Idle && n.InputQueue.Count = 0)
+
+    let day23Part2 () =
+        let program = getProgram InputFile
+        let nicStates = getInitialStates program
+        let mutable natPackage = None
+        let mutable nattedYvalues = Set.empty
+        let mutable repeated = false
+        let mutable i = 0
+        while not repeated do
+            putPacketsInInput nicStates.[i]
+            nicStates.[i] <- runProgram nicStates.[i]
+            let r = distribute nicStates nicStates.[i]
+            if Option.isSome r
+            then natPackage <- r
+            if (isNetworkIdle nicStates)
+            then
+                nicStates.[0].InputQueue.Enqueue(natPackage.Value)
+                let oldCount = nattedYvalues.Count
+                nattedYvalues <- Set.add natPackage.Value.Y nattedYvalues
+                repeated <- oldCount = nattedYvalues.Count
+                printfn "%d" natPackage.Value.Y
+            i <- (i + 1) % 50
+        natPackage.Value.Y
